@@ -168,7 +168,7 @@ const VILLAGE = [
 const THEME_PROPS = {
   forest:  { density: 0.17, w: [["tree", 0.3], ["pine", 0.52], ["bigtree", 0.62], ["bush", 0.8], ["mushroom", 0.9], ["flowers", 0.97], ["signpost", 1]] },
   bloom:   { density: 0.15, w: [["flowers", 0.38], ["mushroom", 0.6], ["bush", 0.8], ["palm", 0.9], ["garden", 0.97], ["lamp", 1]] },
-  rocky:   { density: 0.14, w: [["rock", 0.42], ["stonewall", 0.68], ["pine", 0.84], ["bush", 0.96], ["well", 1]] },
+  rocky:   { density: 0.18, w: [["rock", 0.26], ["rockpile", 0.46], ["boulder", 0.62], ["stonewall", 0.76], ["pine", 0.88], ["statue", 0.94], ["bush", 1]] },
   outpost: { density: 0.08, w: [["hut", 0.22], ["house", 0.36], ["fence", 0.58], ["crate", 0.7], ["stall", 0.8], ["signpost", 0.87], ["campfire", 0.93], ["lamp", 1]] },
   islet:   { density: 0.1, w: [["palm", 0.5], ["tree", 0.75], ["bush", 0.95], ["flowers", 1]] },
 };

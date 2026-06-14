@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { buildWorld, isLand, scatter } from "./world";
+import { buildWorld, isLand, scatter, islandMap } from "./world";
 import { spawnEntities, goldFields, spawnMonsters } from "./entities";
 
 const DIRS = ["south", "east", "north", "west"];
@@ -15,8 +15,10 @@ const PROPS = {
   lamp: { s: 0.7 }, stall: { s: 0.8, blocks: true }, campfire: { s: 0.7 },
   stonewall: { s: 0.66, blocks: true }, signpost: { s: 0.62, blocks: true }, crate: { s: 0.58, blocks: true },
   pine: { s: 0.6, blocks: true }, palm: { s: 0.62, blocks: true }, bigtree: { s: 0.66, blocks: true },
+  mountain: { s: 1.0, blocks: true }, boulder: { s: 0.7, blocks: true }, rockpile: { s: 0.55 }, statue: { s: 0.72, blocks: true },
 };
 const WOOD_KEYS = new Set(["tree", "pine", "palm", "bigtree"]);
+const STONE_KEYS = new Set(["rock", "rockpile"]);
 const NPC_KINDS = ["villager", "trader", "elder", "fisher", "blacksmith"];
 
 const GATHER_RANGE = 56;
@@ -89,13 +91,14 @@ class WorldScene extends Phaser.Scene {
       const px = d.x * 32 + 16, py = cfg.water ? d.y * 32 + 16 : d.y * 32 + 30;
       const img = this.add.image(px, py, `p_${d.key}`).setScale(cfg.s).setOrigin(0.5, cfg.water ? 0.5 : 0.9);
       img.setDepth(cfg.water ? 1 : py);
-      const isResource = WOOD_KEYS.has(d.key) || d.key === "rock";
+      const isResource = WOOD_KEYS.has(d.key) || STONE_KEYS.has(d.key);
       if (isResource) {
         // resource nodes block only their own tile so they can be walked over once cleared
         const key = `${d.x},${d.y}`;
         this.blocked.add(key);
-        const pts = d.key === "rock" ? 3 : d.key === "bigtree" ? 5 : 4; // multi-hit
-        this.nodes.push({ sprite: img, tx: d.x, ty: d.y, blockKey: key, x: px, y: py - 14, kind: d.key === "rock" ? "stone" : "wood", base: cfg.s, points: pts, max: pts, alive: true, respawnAt: 0 });
+        const isStone = STONE_KEYS.has(d.key);
+        const pts = isStone ? 3 : d.key === "bigtree" ? 5 : 4; // multi-hit
+        this.nodes.push({ sprite: img, tx: d.x, ty: d.y, blockKey: key, x: px, y: py - 14, kind: isStone ? "stone" : "wood", base: cfg.s, points: pts, max: pts, alive: true, respawnAt: 0 });
       } else if (cfg.blocks) {
         const src = this.textures.get(`p_${d.key}`).getSourceImage();
         const wT = Math.max(1, Math.round((src.width * cfg.s) / 40)), hT = Math.max(1, Math.round((src.height * cfg.s) / 48));
@@ -140,6 +143,7 @@ class WorldScene extends Phaser.Scene {
       }
     }
 
+    this.placeMountains(built);
     this.makeWake();
     this.spawnBots();
 
@@ -622,6 +626,20 @@ class WorldScene extends Phaser.Scene {
       }
       b.label.setPosition(b.spr.x, b.spr.y - 26);
       if (this.onChat && now > b.chatAt) { b.chatAt = now + 14000 + Math.random() * 32000; if (Math.random() < 0.55) this.onChat({ name: b.name, text: BOT_CHAT[Math.floor(Math.random() * BOT_CHAT.length)] }); }
+    }
+  }
+
+  placeMountains(built) {
+    if (!this.textures.exists("p_mountain")) return;
+    const { islands } = islandMap(built);
+    for (const isl of islands) {
+      if (isl.theme !== "rocky" || isl.size < 22) continue;
+      const snap = this.nearLand(isl.cx, isl.cy, 6); if (!snap) continue;
+      const [tx, ty] = snap, cfg = PROPS.mountain, px = tx * 32 + 16, py = ty * 32 + 30;
+      this.add.image(px, py, "p_mountain").setScale(cfg.s).setOrigin(0.5, 0.85).setDepth(py);
+      const src = this.textures.get("p_mountain").getSourceImage();
+      const wT = Math.max(1, Math.round((src.width * cfg.s) / 40)), hT = Math.max(1, Math.round((src.height * cfg.s) / 48)), half = Math.floor(wT / 2);
+      for (let bx = -half; bx <= half; bx++) for (let by = -(hT - 1); by <= 0; by++) this.blocked.add(`${tx + bx},${ty + by}`);
     }
   }
 
