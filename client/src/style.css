@@ -212,3 +212,10 @@ html, body { height: 100%; overflow: hidden; background: #283021; font-family: "
 .ca-row:hover { background: rgba(8,16,26,0.72); }
 .ca-row b { color: #ffd98a; }
 .ca-copy { color: #9fe7ff; font-weight: 700; }
+
+/* ---- quest tracker ---- */
+#quest { position: absolute; top: 64px; left: 16px; width: 234px; padding: 0; overflow: hidden; }
+.quest-head { font-weight: 800; font-size: 13px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid rgba(138,109,59,0.35); }
+.quest-head #questStep { font-family: monospace; color: var(--green-dd); }
+#questText { padding: 10px 12px; font-size: 13px; line-height: 1.45; color: var(--ink); }
+@media (max-width: 680px) { #quest { width: 60vw; top: 58px; } }

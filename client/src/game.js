@@ -27,6 +27,15 @@ const PLAYER = { maxHp: 10, atkCd: 450, atkRange: 60, atkDmg: 1 };
 const GOB = { maxHp: 3, speed: 52, aggro: 165, contactDist: 26, contactDmg: 1, contactCd: 900, respawnMs: 14000, wander: 64 };
 // boat.png points east-west by default; rotate its long axis to the heading
 const BOAT_ROT = { east: 0, west: 0, north: Math.PI / 2, south: Math.PI / 2 };
+const QUESTS = [
+  { id: "move", text: "Walk around with WASD or the arrow keys", ev: "move", reward: { xp: 5 } },
+  { id: "wood", text: "Chop a tree — click it, or press E when close", ev: "gather", kind: "wood", reward: { wood: 10, xp: 10 } },
+  { id: "stone", text: "Mine a rock to collect stone", ev: "gather", kind: "stone", reward: { stone: 10, xp: 10 } },
+  { id: "talk", text: "Visit a merchant — click a villager", ev: "shop", reward: { gold: 25, xp: 10 } },
+  { id: "sail", text: "Walk into the sea to board your boat", ev: "boat", reward: { xp: 15 } },
+  { id: "fight", text: "Strike a goblin — Space, or click it", ev: "hit", reward: { gold: 30, xp: 20 } },
+  { id: "gear", text: "Gear up at Brom the Smith's Armory", ev: "gear", reward: { xp: 25 } },
+];
 const N_BOTS = 18;
 const BOT_NAMES = ["saltydog", "ReefRunner", "Mara", "kuyng", "BoraBora", "driftwood", "TideY", "Penny", "gg_otter", "Marlin", "sandy", "Koa", "reef42", "blub", "Nemo_", "seafarer", "Lagoona", "oysterboy", "pearl", "Finn", "Wavey", "Brizo", "castaway", "skipper", "Coraline", "Nori", "Bayou", "Triton", "Misty", "Shelly", "barnacle", "Squid", "deepblue", "Marin"];
 const BOT_CHAT = ["anyone selling wood?", "the east gold isle is brutal lol", "gg", "how do i equip the saber", "this music is so chill", "lvl up lets gooo", "need meat to revive my guy", "where do i buy armor", "sailing is smooth af", "found a hidden isle", "brb mining", "who wants to trade stone", "the goblins keep wrecking me", "new here, this is cozy", "wen token", "anyone near the windmill?", "just hit a goblin for 5 dmg", "love this map"];
@@ -176,7 +185,7 @@ class WorldScene extends Phaser.Scene {
     this.input.on("pointerdown", (pointer) => {
       if (this.ambient) return;
       const wx = pointer.worldX, wy = pointer.worldY;
-      for (const n of this.npcs) { if (Math.hypot(n.spr.x - wx, n.spr.y - wy) < 30) { window.LZ_openShop?.(n.kind, n.name); return; } }
+      for (const n of this.npcs) { if (Math.hypot(n.spr.x - wx, n.spr.y - wy) < 30) { window.LZ_openShop?.(n.kind, n.name); this.questCheck("shop"); return; } }
       let node = null, nd = 34;
       for (const n of this.nodes) { if (!n.alive) continue; const d = Math.hypot(n.x - wx, n.y - wy); if (d < nd) { nd = d; node = n; } }
       let enemy = null, ed = 34;
@@ -224,6 +233,7 @@ class WorldScene extends Phaser.Scene {
     this.myLabel.setText(`${me.name || "you"} Lv 1`).setVisible(true);
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
     this.updateHud();
+    this.initQuests();
 
     this.net.on("init", (m) => {
       this.serverId = m.id;
@@ -354,6 +364,35 @@ class WorldScene extends Phaser.Scene {
     return { ok: true };
   }
 
+  initQuests() {
+    this.questIdx = parseInt(localStorage.getItem("lz_quest") || "0", 10) || 0;
+    this.updateQuestUI();
+  }
+
+  questCheck(ev, kind) {
+    if (this.ambient || this.questIdx == null) return;
+    const q = QUESTS[this.questIdx];
+    if (!q || q.ev !== ev || (q.kind && q.kind !== kind)) return;
+    const r = q.reward || {};
+    if (r.wood) this.stats.wood += r.wood;
+    if (r.stone) this.stats.stone += r.stone;
+    if (r.gold) this.stats.gold += r.gold;
+    if (r.xp) this.stats.xp += r.xp;
+    this.floatText(this.player.x, this.player.y - 56, "✓ Quest complete!", "#ffe27a");
+    this.questIdx++;
+    localStorage.setItem("lz_quest", String(this.questIdx));
+    this.updateHud();
+    this.updateQuestUI();
+  }
+
+  updateQuestUI() {
+    const el = document.getElementById("quest"), txt = document.getElementById("questText"), step = document.getElementById("questStep");
+    if (!el || !txt) return;
+    if (this.questIdx >= QUESTS.length) { txt.textContent = "All done — explore freely, captain!"; step.textContent = "✓"; el.classList.remove("hidden"); clearTimeout(this._qh); this._qh = setTimeout(() => el.classList.add("hidden"), 6000); return; }
+    txt.textContent = QUESTS[this.questIdx].text; step.textContent = `${this.questIdx + 1}/${QUESTS.length}`;
+    el.classList.remove("hidden");
+  }
+
   gearStats() {
     let str = 0, agi = 0, vit = 0;
     for (const k in this.equip) { const g = this.equip[k]; if (g) { str += g.str || 0; agi += g.agi || 0; vit += g.vit || 0; } }
@@ -376,6 +415,7 @@ class WorldScene extends Phaser.Scene {
     this.equip[item.slot] = item;
     this.recomputeGear();
     this.floatText(this.player.x, this.player.y - 42, `Equipped ${item.name}`, "#a9e06a");
+    this.questCheck("gear");
     return { ok: true };
   }
 
@@ -492,6 +532,7 @@ class WorldScene extends Phaser.Scene {
     if (node.max > 1) node.sprite.setScale(node.base * (0.4 + 0.6 * Math.max(0, node.points) / node.max));
     this.flyToBag(node.x, node.y, node.kind);
     if (node.points <= 0) this.depleteNode(node);
+    this.questCheck("gather", node.kind);
     this.updateHud();
     return true;
   }
@@ -639,6 +680,7 @@ class WorldScene extends Phaser.Scene {
       this.flash(hit.spr, 0xff5566);
       this.hitEffect(hit.spr.x, hit.spr.y - 8);
       this.floatText(hit.spr.x, hit.spr.y - 18, `-${dmg}`, "#ffd24a");
+      this.questCheck("hit");
       if (hit.hp <= 0) this.killGoblin(hit);
     });
   }
@@ -775,12 +817,14 @@ class WorldScene extends Phaser.Scene {
       if (_t - this.lastSent > 70) { this.lastSent = _t; this.net.send("move", { x: Math.round(this.player.x), y: Math.round(this.player.y), dir: this.dir, boat: this.onBoat }); }
     } else if (this.moving) { this.player.anims.stop(); this.player.setTexture(`hero_${this.dir}`); }
     this.moving = moving;
+    if (moving) this.questCheck("move");
 
     // ride the boat while on water — bow points the way you sail, foam at the waterline
     if (this.onBoat) {
       this.boat.setVisible(true).setPosition(this.player.x, this.player.y + 9).setDepth(this.player.y - 1).setRotation(BOAT_ROT[this.dir] || 0);
       const pulse = 1 + Math.sin(this.foamT * 4) * 0.06;
       this.boatFoam.setVisible(true).setPosition(this.player.x, this.player.y + 13).setDepth(this.player.y - 1.5).setScale(pulse);
+      this.questCheck("boat");
     } else { this.boat.setVisible(false); this.boatFoam.setVisible(false); }
 
     // foam wake trailing the boat as it sails
