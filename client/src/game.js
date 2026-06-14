@@ -27,6 +27,9 @@ const PLAYER = { maxHp: 10, atkCd: 450, atkRange: 60, atkDmg: 1 };
 const GOB = { maxHp: 3, speed: 52, aggro: 165, contactDist: 26, contactDmg: 1, contactCd: 900, respawnMs: 14000, wander: 64 };
 // boat.png points east-west by default; rotate its long axis to the heading
 const BOAT_ROT = { east: 0, west: 0, north: Math.PI / 2, south: Math.PI / 2 };
+const N_BOTS = 18;
+const BOT_NAMES = ["saltydog", "ReefRunner", "Mara", "kuyng", "BoraBora", "driftwood", "TideY", "Penny", "gg_otter", "Marlin", "sandy", "Koa", "reef42", "blub", "Nemo_", "seafarer", "Lagoona", "oysterboy", "pearl", "Finn", "Wavey", "Brizo", "castaway", "skipper", "Coraline", "Nori", "Bayou", "Triton", "Misty", "Shelly", "barnacle", "Squid", "deepblue", "Marin"];
+const BOT_CHAT = ["anyone selling wood?", "the east gold isle is brutal lol", "gg", "how do i equip the saber", "this music is so chill", "lvl up lets gooo", "need meat to revive my guy", "where do i buy armor", "sailing is smooth af", "found a hidden isle", "brb mining", "who wants to trade stone", "the goblins keep wrecking me", "new here, this is cozy", "wen token", "anyone near the windmill?", "just hit a goblin for 5 dmg", "love this map"];
 const levelFor = (xp) => Math.floor(Math.sqrt(xp / 20)) + 1;
 const xpInLevel = (xp) => { const lv = levelFor(xp); const lo = 20 * (lv - 1) * (lv - 1); const hi = 20 * lv * lv; return { lv, frac: (xp - lo) / (hi - lo) }; };
 
@@ -129,6 +132,7 @@ class WorldScene extends Phaser.Scene {
     }
 
     this.makeWake();
+    this.spawnBots();
 
     this.physics.world.setBounds(0, 0, W * T, H * T);
     this.cameras.main.setBounds(0, 0, W * T, H * T);
@@ -194,6 +198,7 @@ class WorldScene extends Phaser.Scene {
       stats: () => ({ ...this.stats, ...xpInLevel(this.stats.xp) }),
       onBoat: () => this.onBoat,
       enemyCount: () => this.enemies?.length || 0,
+      botCount: () => this.bots?.length || 0,
       mobsOnWater: () => (this.enemies || []).filter((e) => e.alive && this.terrain.tiles[Math.floor(e.spr.y / 32) * this.terrain.W + Math.floor(e.spr.x / 32)] === this.terrain.allWater).length,
       grant: (g) => this.grant(g),
       buyPotion: (cost, fx) => this.buyPotion(cost, fx),
@@ -511,6 +516,74 @@ class WorldScene extends Phaser.Scene {
   }
 
   // ---- combat ----
+  // ---- ambient bots that wander, sail and chat like other players ----
+  spawnBots() {
+    this.bots = [];
+    const cxT = Math.floor(this.terrain.W / 2), cyT = Math.floor(this.terrain.H / 2);
+    const names = [...BOT_NAMES].sort(() => Math.random() - 0.5);
+    for (let i = 0; i < N_BOTS; i++) {
+      let tx = cxT, ty = cyT, tries = 0;
+      do { tx = cxT + Math.round((Math.random() * 2 - 1) * 34); ty = cyT + Math.round((Math.random() * 2 - 1) * 34); tries++; } while (!this.walkable(tx, ty) && tries < 60);
+      const px = tx * 32 + 16, py = ty * 32 + 16;
+      const spr = this.add.sprite(px, py, "hero_south").setScale(0.62).setDepth(py);
+      spr.setTint(Phaser.Display.Color.HSVToRGB(Math.random(), 0.28, 1).color);
+      const name = names[i] || `Sailor${i}`, level = 1 + Math.floor(Math.random() * 32);
+      const label = this.makeLabel(name, level, false);
+      const boat = this.add.image(px, py, "p_boat").setScale(0.92).setVisible(false);
+      this.bots.push({ spr, boat, label, name, dir: "south", target: null, onBoat: false, wait: Math.random() * 2, chatAt: 6000 + i * 3500 + Math.random() * 4000 });
+    }
+  }
+
+  botStand(wx, wy) {
+    const W = this.terrain.W, x = Math.floor(wx / 32), y = Math.floor(wy / 32);
+    const inB = x >= 0 && y >= 0 && x < W && y < this.terrain.H;
+    const bridge = this.bridges.has(`${x},${y}`);
+    const water = inB && this.terrain.tiles[y * W + x] === this.terrain.allWater && !bridge;
+    const ok = inB && (water || ((isLand(this.terrain, x, y) || bridge) && !this.blocked.has(`${x},${y}`)));
+    return { ok, water };
+  }
+
+  updateBots(dt) {
+    if (!this.bots) return;
+    const now = this.time.now;
+    for (const b of this.bots) {
+      if (!b.target) {
+        b.wait -= dt;
+        if (b.wait <= 0) {
+          let tx, ty, tries = 0;
+          do { tx = Math.floor(b.spr.x / 32) + Math.round((Math.random() * 2 - 1) * 11); ty = Math.floor(b.spr.y / 32) + Math.round((Math.random() * 2 - 1) * 11); tries++; } while (!this.walkable(tx, ty) && tries < 24);
+          if (this.walkable(tx, ty)) b.target = { x: tx * 32 + 16, y: ty * 32 + 16 };
+          else b.wait = 0.5;
+        }
+      }
+      let moving = false;
+      if (b.target) {
+        const dx = b.target.x - b.spr.x, dy = b.target.y - b.spr.y, d = Math.hypot(dx, dy);
+        if (d < 6) { b.target = null; b.wait = 0.6 + Math.random() * 3; }
+        else {
+          const step = 68 * dt;
+          const sx = Math.sign(dx) * Math.min(step, Math.abs(dx)), sy = Math.sign(dy) * Math.min(step, Math.abs(dy));
+          let nx = b.spr.x, ny = b.spr.y, water = b.onBoat;
+          const rx = this.botStand(nx + sx, ny); if (rx.ok) { nx += sx; water = rx.water; }
+          const ry = this.botStand(nx, ny + sy); if (ry.ok) { ny += sy; water = ry.water; }
+          if (nx === b.spr.x && ny === b.spr.y) { b.target = null; b.wait = 0.3; }
+          else { b.spr.x = nx; b.spr.y = ny; b.onBoat = water; b.dir = this.faceDir(dx, dy); moving = true; }
+        }
+      }
+      b.spr.setDepth(b.spr.y);
+      if (b.onBoat) {
+        b.spr.anims.stop(); if (b.spr.texture.key !== `hero_${b.dir}`) b.spr.setTexture(`hero_${b.dir}`);
+        b.boat.setVisible(true).setPosition(b.spr.x, b.spr.y + 9).setDepth(b.spr.y - 1).setRotation(BOAT_ROT[b.dir] || 0);
+      } else {
+        b.boat.setVisible(false);
+        if (moving) b.spr.anims.play(`walk_${b.dir}`, true);
+        else { b.spr.anims.stop(); if (b.spr.texture.key !== `hero_${b.dir}`) b.spr.setTexture(`hero_${b.dir}`); }
+      }
+      b.label.setPosition(b.spr.x, b.spr.y - 26);
+      if (this.onChat && now > b.chatAt) { b.chatAt = now + 14000 + Math.random() * 32000; if (Math.random() < 0.55) this.onChat({ name: b.name, text: BOT_CHAT[Math.floor(Math.random() * BOT_CHAT.length)] }); }
+    }
+  }
+
   nearLand(tx, ty, r = 5) {
     if (isLand(this.terrain, tx, ty) && !this.blocked.has(`${tx},${ty}`)) return [tx, ty];
     for (let rad = 1; rad <= r; rad++) for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) {
@@ -644,7 +717,7 @@ class WorldScene extends Phaser.Scene {
       // slow cinematic drift over the island for the login backdrop
       this.camDrift += dt * 0.05;
       this.cameras.main.centerOn(this.cx + Math.cos(this.camDrift) * 360, this.cy + Math.sin(this.camDrift * 0.8) * 250);
-      this.updateNodes(); this.updateNpcs(dt);
+      this.updateNodes(); this.updateNpcs(dt); this.updateBots(dt);
       if (this.minimap) this.drawMinimap();
       return;
     }
@@ -717,7 +790,7 @@ class WorldScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.keys.E)) this.tryGather();
     if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) this.tryAttack();
 
-    this.updateNodes(); this.updateNpcs(dt); this.updateEnemies(dt); this.updateHint();
+    this.updateNodes(); this.updateNpcs(dt); this.updateEnemies(dt); this.updateBots(dt); this.updateHint();
     this.myLabel.setPosition(this.player.x, this.player.y - 26);
     for (const [id, spr] of this.others) {
       const dx = spr.target.x - spr.x, dy = spr.target.y - spr.y, dist = Math.hypot(dx, dy);
@@ -781,6 +854,7 @@ class WorldScene extends Phaser.Scene {
     ctx.clearRect(0, 0, c.width, c.height); ctx.drawImage(this._mmBase, 0, 0);
     for (const e of this.enemies || []) { if (!e.alive) continue; ctx.fillStyle = "#ff5566"; ctx.fillRect((e.spr.x / 32) * s - 1, (e.spr.y / 32) * s - 1, 2, 2); }
     for (const n of this.npcs) { ctx.fillStyle = "#9fe7ff"; ctx.fillRect((n.spr.x / 32) * s - 1, (n.spr.y / 32) * s - 1, 2, 2); }
+    for (const b of this.bots || []) { ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.fillRect((b.spr.x / 32) * s - 1, (b.spr.y / 32) * s - 1, 2, 2); }
     for (const spr of this.others.values()) { ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.fillRect((spr.x / 32) * s - 1, (spr.y / 32) * s - 1, 2, 2); }
     if (!this.ambient) { ctx.fillStyle = "#ffe27a"; ctx.fillRect((this.player.x / 32) * s - 2, (this.player.y / 32) * s - 2, 4, 4); }
   }

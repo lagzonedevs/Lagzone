@@ -11,7 +11,10 @@ window.LZ_openShop = (kind, name) => openNpcShop(kind, name);
 
 const WS_URL = (import.meta.env.VITE_LAGZONE_WS || (location.hostname === "localhost" ? "ws://localhost:8920" : "")).trim().replace(/^[^a-zA-Z]+/, "");
 const HTTP_URL = WS_URL.replace(/^ws/, "http");
-const X_URL = "https://x.com/lagzone";
+const X_URL = "https://x.com/Lagzonefun";
+const TG_URL = "https://t.me/lagzonesol";
+const CA = "TBA"; // set to the $LAG contract address on launch
+const BUY_URL = CA !== "TBA" ? `https://pump.fun/coin/${CA}` : X_URL;
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -45,19 +48,28 @@ async function pollHealth() {
   if (!HTTP_URL) return;
   try { const h = await (await fetch(HTTP_URL + "/health")).json(); setOnline(h.online ?? 0); } catch {}
 }
-function setOnline(n) { online = n; const b = `${n}`; $("onlineLand").querySelector("b").textContent = b; $("onlinePill").querySelector("b").textContent = b; }
+const BOT_BASE = 18; // ambient bots populating the world
+function setOnline(n) { online = n; const b = `${n + BOT_BASE}`; $("onlineLand").querySelector("b").textContent = b; $("onlinePill").querySelector("b").textContent = b; }
 $("xlink").href = X_URL;
-pollHealth(); setInterval(pollHealth, 15000);
+$("tglink").href = TG_URL;
+$("caText").textContent = CA;
+$("caRow").onclick = () => {
+  if (CA === "TBA") return;
+  navigator.clipboard?.writeText(CA).then(() => {
+    const c = $("caRow").querySelector(".ca-copy"); const o = c.textContent; c.textContent = "copied ✓";
+    setTimeout(() => { c.textContent = o; }, 1400);
+  });
+};
+setOnline(0); pollHealth(); setInterval(pollHealth, 15000);
 
 // ---- flow ----
 $("playBtn").onclick = () => { $("nameModal").classList.remove("hidden"); $("heroName").focus(); };
-$("spectateBtn").onclick = () => enterGame("Guest" + Math.floor(1000 + Math.random() * 9000));
 $("setSail").onclick = () => {
   const n = $("heroName").value.trim();
   if (n.length < 2) { $("heroName").focus(); return; }
   enterGame(n);
 };
-$("heroName").addEventListener("keydown", (e) => { if (e.key === "Enter") $("setSail").click(); });
+$("heroName").addEventListener("keydown", (e) => { e.stopPropagation(); if (e.key === "Enter") $("setSail").click(); });
 
 // ---- HUD: chat, toolbar, tutorial, inventory ----
 const toggle = (id, btn) => { const el = $(id), hid = el.classList.toggle("hidden"); if (btn) $(btn).classList.toggle("on", !hid); return !hid; };

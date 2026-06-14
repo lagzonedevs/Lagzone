@@ -56,14 +56,15 @@ html, body { height: 100%; overflow: hidden; background: #283021; font-family: "
 #landing { position: fixed; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center;
   background: radial-gradient(120% 100% at 50% 40%, rgba(8,14,6,0.30), rgba(6,10,5,0.74) 90%);
 }
-.login-card { width: 420px; max-width: 92vw; padding: 30px 28px 22px; text-align: center; display: flex; flex-direction: column; gap: 12px; }
+.login-card { width: 470px; max-width: 94vw; padding: 0; text-align: center; display: flex; flex-direction: column; gap: 9px; background: none; border: 0; box-shadow: none; }
+.login-banner { width: 132%; margin: 0 -16% -14px; display: block; filter: drop-shadow(0 12px 22px rgba(0,0,0,0.55)); pointer-events: none; }
 .login-logo { font-family: "Jersey 15", monospace; font-size: 68px; letter-spacing: 3px; line-height: 0.9;
   color: #4a7fb0; text-shadow: 0 3px 0 #2e567d, 0 0 0 #fff, 2px 2px 0 #fff, -2px 2px 0 #fff; }
-.login-tag { font-size: 14px; color: var(--ink-soft); margin-bottom: 6px; }
-.login-foot { margin-top: 8px; font-size: 12px; color: var(--ink-soft); }
-.login-foot a { color: #a9692f; text-decoration: none; }
-.login-foot b { color: var(--ink); }
-.login-online { font-size: 12px; color: var(--ink-soft); }
+.login-tag { font-size: 14px; color: #f1ead6; margin-bottom: 2px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); font-weight: 600; }
+.login-foot { margin-top: 8px; font-size: 12px; color: #dfe6d2; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+.login-foot a { color: #ffd98a; text-decoration: none; }
+.login-foot b { color: #fff; }
+.login-online { font-size: 12px; color: #dfe6d2; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
 .login-online i, #onlinePill i, .land-stats i { width: 8px; height: 8px; border-radius: 50%; background: #59e08a; display: inline-block; box-shadow: 0 0 8px #59e08a; margin-right: 4px; vertical-align: middle; }
 
 /* ---- name modal ---- */
@@ -200,3 +201,14 @@ html, body { height: 100%; overflow: hidden; background: #283021; font-family: "
 /* ---- brand logo ---- */
 .login-mark { width: 92px; height: 92px; image-rendering: pixelated; display: block; margin: 0 auto -6px; }
 .topbar-mark { width: 22px; height: 22px; image-rendering: pixelated; vertical-align: middle; margin-right: 7px; }
+
+/* ---- lobby buy + CA ---- */
+.wbtn.buy { color: #4a2a06; text-decoration: none;
+  background: linear-gradient(180deg, rgba(255,255,255,0.45), rgba(0,0,0,0) 45%), linear-gradient(180deg, #ffcf5a, #f59a1e);
+  box-shadow: 0 0 0 2px #9a5a12, 0 0 0 4px #d98a2a, inset 0 2px 0 rgba(255,255,255,0.6), inset 0 -3px 0 rgba(154,90,18,0.55), 0 6px 0 #9a5a12, 0 12px 18px rgba(0,0,0,0.32); }
+.wbtn.buy:active { transform: translateY(4px); box-shadow: 0 0 0 2px #9a5a12, 0 0 0 4px #d98a2a, inset 0 2px 0 rgba(255,255,255,0.5), 0 2px 0 #9a5a12, 0 6px 10px rgba(0,0,0,0.3); }
+.ca-row { margin-top: 4px; font-family: monospace; font-size: 11.5px; color: #e7eedb; background: rgba(8,16,26,0.55); border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 999px; padding: 6px 14px; cursor: pointer; text-shadow: 0 1px 2px rgba(0,0,0,0.7); display: inline-flex; align-items: center; gap: 6px; align-self: center; }
+.ca-row:hover { background: rgba(8,16,26,0.72); }
+.ca-row b { color: #ffd98a; }
+.ca-copy { color: #9fe7ff; font-weight: 700; }
