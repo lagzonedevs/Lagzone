@@ -13,7 +13,7 @@ const WS_URL = (import.meta.env.VITE_LAGZONE_WS || (location.hostname === "local
 const HTTP_URL = WS_URL.replace(/^ws/, "http");
 const X_URL = "https://x.com/Lagzonefun";
 const TG_URL = "https://t.me/lagzonesol";
-const CA = "TBA"; // set to the $LAG contract address on launch
+const CA = "EXJyRsfUfwvBtnXs6WZVRWNF2KJwqSkoidMs9LfSpump"; // $LAG contract address
 const BUY_URL = CA !== "TBA" ? `https://pump.fun/coin/${CA}` : X_URL;
 
 const $ = (id) => document.getElementById(id);
