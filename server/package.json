@@ -1,0 +1,15 @@
+{
+  "name": "lagzone-server",
+  "version": "0.1.0",
+  "description": "Lagzone — authoritative WebSocket server for the realtime MMO: players, movement, global chat, guest + wallet identity.",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lagzone — a realtime pixel MMO on Solana</title>
+    <meta name="description" content="Lagzone — a realtime browser MMO on Solana. Set sail as guest or connect your wallet, explore the island, gather, chat and adventure with players online." />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Jersey+15&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <!-- game canvas mounts here -->
+    <div id="game"></div>
+
+    <!-- in-game HUD overlays (hidden until playing) -->
+    <div id="hud" class="hidden">
+      <!-- top-left: logo + online + wallet -->
+      <div id="topbar">
+        <div class="wood-pill logo"><img class="topbar-mark" src="/logo.png" alt="" onerror="this.style.display='none'" />LAGZONE</div>
+        <div class="wood-pill" id="onlinePill"><i></i> <b>0</b> online</div>
+        <button id="walletBtn" class="wbtn sm">Connect Wallet</button>
+      </div>
+
+      <!-- top-center tutorial -->
+      <div id="tutorial" class="hidden">
+        <span class="tut-ic">📖</span>
+        <span class="tut-txt">Welcome to <b>Lagzone</b>! Explore the island, walk up to trees &amp; rocks and press <b>E</b> to gather wood and stone, and chat with players online.</span>
+        <button id="tutGo" class="wbtn sm">Let's go</button>
+        <span class="x" id="tutClose">×</span>
+      </div>
+
+      <!-- top-right: minimap + resources -->
+      <div id="mapwrap" class="wood-frame">
+        <canvas id="minimap" width="150" height="150"></canvas>
+      </div>
+      <div id="resbar">
+        <div class="wood-pill res"><img src="/assets/icons/wood.png" alt="wood" /><b id="statWood">0</b></div>
+        <div class="wood-pill res"><img src="/assets/icons/stone.png" alt="stone" /><b id="statStone">0</b></div>
+        <div class="wood-pill res"><img src="/assets/icons/gold.png" alt="gold" /><b id="statGold">0</b></div>
+      </div>
+
+      <!-- bottom-left: chat -->
+      <div id="chat" class="wood-frame">
+        <div class="chat-head"><span>💬 Chat</span><span id="chatClose" class="x">×</span></div>
+        <div class="chat-tabs"><button class="tab active" data-tab="public">Public</button><button class="tab" data-tab="whispers">Whispers</button></div>
+        <div id="chatLog"></div>
+        <form id="chatForm"><input id="chatInput" maxlength="160" placeholder="Type a message…" autocomplete="off" /><button class="wbtn sm">Send</button></form>
+      </div>
+
+      <!-- bottom-right: You bar + toolbar -->
+      <div id="buffs"></div>
+      <div id="youbar"><span class="you-l">You <b id="youLvl">Lv 1</b></span><div class="hpbar"><i id="hpFill"></i></div></div>
+      <div id="toolbar">
+        <button class="tool" id="tbChat" title="Chat"><img src="/assets/icons/chat.png" alt="chat" /></button>
+        <button class="tool" id="tbInv" title="Inventory"><img src="/assets/icons/bag.png" alt="inventory" /></button>
+        <button class="tool" id="tbShop" title="Marketplace"><img src="/assets/icons/market.png" alt="market" /></button>
+        <button class="tool" id="tbMap" title="Recenter"><img src="/assets/icons/map.png" alt="map" /></button>
+        <button class="tool" id="tbHelp" title="How to play"><img src="/assets/icons/help.png" alt="help" /></button>
+        <button class="tool" id="tbCtrl" title="Controls"><img src="/assets/icons/gear.png" alt="settings" /></button>
+      </div>
+
+      <!-- inventory popover -->
+      <div id="inventory" class="panel wood-frame hidden">
+        <div class="panel-head"><span>🎒 Inventory</span><span class="x" data-close>×</span></div>
+        <div class="inv-grid">
+          <div class="inv-cell"><img src="/assets/icons/wood.png" alt="wood" /><b id="invWood">0</b><em>Wood</em></div>
+          <div class="inv-cell"><img src="/assets/icons/stone.png" alt="stone" /><b id="invStone">0</b><em>Stone</em></div>
+          <div class="inv-cell"><img src="/assets/icons/gold.png" alt="gold" /><b id="invGold">0</b><em>Gold</em></div>
+          <div class="inv-cell"><img src="/assets/icons/meat.png" alt="meat" /><b id="invMeat">0</b><em>Meat</em></div>
+          <div class="inv-cell"><img src="/assets/icons/heart.png" alt="heal" /><b id="invHeals">0</b><em>Heals</em></div>
+        </div>
+        <div class="equip-sec">
+          <div class="equip-title">Equipment</div>
+          <div class="equip-row"><span>Weapon</span><b id="eqWeapon">—</b></div>
+          <div class="equip-row"><span>Armor</span><b id="eqArmor">—</b></div>
+          <div class="equip-row"><span>Shoes</span><b id="eqShoes">—</b></div>
+          <div class="equip-stats" id="eqStats">STR +0 · AGI +0 · VIT +0</div>
+        </div>
+      </div>
+
+      <!-- controls popover -->
+      <div id="ctrlpop" class="panel wood-frame hidden">
+        <div class="panel-head"><span>⚙️ Controls</span><span class="x" data-close>×</span></div>
+        <ul class="ctrl-list">
+          <li><b>WASD</b> / arrows — move &amp; sail</li>
+          <li><b>E</b> — gather wood, stone &amp; gold</li>
+          <li><b>Space</b> / click — attack goblins</li>
+          <li><b>Click</b> a tree/ore/foe — auto-path &amp; act</li>
+          <li>Goblins guard the <b>gold isles</b></li>
+        </ul>
+        <div class="ctrl-sound">
+          <button id="muteBtn" class="wbtn sm">Sound: On</button>
+          <input id="volSlider" type="range" min="0" max="100" value="50" />
+        </div>
+      </div>
+
+      <div id="hint" class="hidden"></div>
+    </div>
+
+    <!-- landing / login -->
+    <div id="landing">
+      <div class="login-card wood-frame">
+        <img class="login-mark" src="/logo.png" alt="" onerror="this.style.display='none'" />
+        <div class="login-logo">LAGZONE</div>
+        <p class="login-tag">Claim your island · gather · chat · adventure on Solana</p>
+        <button id="walletBtn2" class="wbtn">🔗 Connect Wallet</button>
+        <button id="playBtn" class="wbtn primary">⛵ Set sail as guest</button>
+        <button id="spectateBtn" class="link-btn">or just spectate</button>
+        <div class="login-foot">
+          <span id="caPill">CA <b>TBA</b></span> ·
+          <a href="/docs">Docs</a> ·
+          <a id="xlink" href="#" target="_blank" rel="noopener">X</a>
+        </div>
+        <div class="login-online"><i></i> <span id="onlineLand"><b>0</b> players online</span></div>
+      </div>
+    </div>
+
+    <!-- hero name modal -->
+    <div id="nameModal" class="modal hidden">
+      <div class="modal-card wood-frame">
+        <div class="modal-title">⚓ Choose your hero name</div>
+        <input id="heroName" maxlength="16" placeholder="e.g. Captain Reef" autocomplete="off" />
+        <div class="modal-hint">2 to 16 characters · letters, numbers, _ and spaces</div>
+        <button id="setSail" class="wbtn primary full">Set sail</button>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
